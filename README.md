@@ -131,14 +131,75 @@ datacraft-supertool/
 - **Secure Execution**: Sandboxed environment for AI-generated code
 - **Intelligent Fallbacks**: Local processing when AI services are unavailable
 
+## 🐳 Docker Deployment
+
+### Quick Start with Docker
+
+The easiest way to run DataCraft SuperTool is using Docker Compose:
+
+```bash
+# Start the application
+docker-compose up
+
+# Run in background
+docker-compose up -d
+
+# Stop the application
+docker-compose down
+```
+
+That's it! Docker Compose handles everything - building, running, and managing the container.
+
+### Environment Variables
+
+Set your API keys using any of these methods:
+
+**Option 1: .env file (recommended)**
+```bash
+# Create .env file
+echo "OPENAI_API_KEY=your-key-here" > .env
+echo "GOOGLE_API_KEY=your-gemini-key" >> .env
+
+# Run with environment file
+docker-compose up
+```
+
+**Option 2: Direct environment variables**
+```bash
+export OPENAI_API_KEY=your-key-here
+export GOOGLE_API_KEY=your-gemini-key
+docker-compose up
+```
+
+### Docker Commands Reference
+
+```bash
+# Start application
+docker-compose up              # Foreground (with logs)
+docker-compose up -d           # Background
+
+# View logs
+docker-compose logs -f
+
+# Stop application
+docker-compose down
+
+# Rebuild and restart
+docker-compose up --build
+
+# View running containers
+docker-compose ps
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for GPT models | One of the AI keys |
-| `GOOGLE_API_KEY` | Google Gemini API key | One of the AI keys |
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `OPENAI_API_KEY` | OpenAI API key for GPT models | One of the AI keys | - |
+| `GOOGLE_API_KEY` | Google Gemini API key | One of the AI keys | - |
+| `PYTHONUNBUFFERED` | Disable Python output buffering | No | 1 |
 
 ### Advanced Settings
 
@@ -147,6 +208,76 @@ You can customize the behavior by modifying the configuration in `app.py`:
 - **Sample Size**: Adjust the data sample size for AI processing
 - **Chart Types**: Enable/disable specific visualization types
 - **Security Settings**: Modify code execution restrictions
+
+## 🚀 Production Deployment
+
+### Docker Compose Deployment
+
+For production deployment with persistence and proper logging:
+
+```bash
+# Create production environment file
+cp .env.example .env
+# Edit .env with your API keys
+
+# Deploy with Docker Compose
+docker-compose up -d
+
+# Monitor logs
+docker-compose logs -f
+
+# Update deployment
+docker-compose pull
+docker-compose up -d --no-deps --build datacraft-supertool
+```
+
+### Cloud Deployment Options
+
+**AWS/GCP/Azure:**
+```bash
+# Build for cloud
+docker build -t your-registry/datacraft-supertool:latest .
+docker push your-registry/datacraft-supertool:latest
+
+# Deploy with your cloud provider's container service
+```
+
+**Kubernetes:**
+```yaml
+# k8s-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datacraft-supertool
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datacraft-supertool
+  template:
+    metadata:
+      labels:
+        app: datacraft-supertool
+    spec:
+      containers:
+      - name: datacraft-supertool
+        image: datacraft-supertool:latest
+        ports:
+        - containerPort: 8501
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-keys
+              key: openai-key
+```
+
+### Health Monitoring
+
+The application includes built-in health checks:
+- Health endpoint: `http://localhost:8501/_stcore/health`
+- Container health check: Configured in Dockerfile
+- Monitoring: Logs written to `/app/logs/` directory
 
 ## 🚨 Troubleshooting
 
@@ -170,6 +301,40 @@ pip install --upgrade -r requirements.txt
 **Performance issues with large files**
 - The app automatically optimizes for large datasets
 - For files >100MB, consider preprocessing or sampling
+
+### Docker Issues
+
+**Container won't start**
+```bash
+# Check Docker is running
+docker info
+
+# Check logs
+docker-compose logs
+
+# Rebuild and restart
+docker-compose down
+docker-compose up --build
+```
+
+**Permission errors with volumes**
+```bash
+# Fix file permissions
+sudo chown -R $USER:$USER ./data ./logs
+
+# Restart application
+docker-compose down
+docker-compose up
+```
+
+**Port already in use**
+```bash
+# Check what's using port 8501
+sudo lsof -i :8501
+
+# Or edit docker-compose.yml to use different port
+# Change "8501:8501" to "3000:8501"
+```
 
 ## 🤝 Contributing
 
