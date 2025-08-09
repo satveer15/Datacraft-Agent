@@ -34,24 +34,76 @@ st.markdown("Craft brilliant insights from any dataset with AI precision!")
 with st.sidebar:
     st.header("⚙️ Configuration")
     st.subheader("API Keys")
-    openai_key = st.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
-    gemini_key = st.text_input("Google Gemini API Key", type="password", value=os.getenv("GOOGLE_API_KEY", ""))
     
-    if not openai_key and not gemini_key:
-        st.info("💡 Add at least one API key to enable AI features")
-        logger.info("No API keys provided by user")
+    # Get environment keys (never show these)
+    env_openai_key = os.getenv("OPENAI_API_KEY", "")
+    env_gemini_key = os.getenv("GOOGLE_API_KEY", "")
+    
+    # Show which keys are configured via environment
+    env_configured = []
+    if env_openai_key and env_openai_key not in ["your_working_api_key_here", ""]:
+        env_configured.append("OpenAI")
+    if env_gemini_key and env_gemini_key not in ["your_gemini_api_key_here", ""]:
+        env_configured.append("Gemini")
+    
+    if env_configured:
+        st.success(f"🔒 Environment keys configured: {', '.join(env_configured)}")
+        logger.info(f"Environment API keys detected: {', '.join(env_configured)}")
+    
+    # User input for additional/override keys (never show environment values)
+    st.markdown("##### Override or Add Additional Keys:")
+    user_openai_key = st.text_input(
+        "OpenAI API Key (optional override)", 
+        type="password", 
+        help="Leave empty to use environment key if available",
+        placeholder="sk-..." if not env_openai_key else "Using environment key (leave empty)"
+    )
+    user_gemini_key = st.text_input(
+        "Google Gemini API Key (optional override)", 
+        type="password", 
+        help="Leave empty to use environment key if available",
+        placeholder="AIza..." if not env_gemini_key else "Using environment key (leave empty)"
+    )
+    
+    # Determine final keys to use (user input overrides environment)
+    final_openai_key = user_openai_key if user_openai_key else env_openai_key
+    final_gemini_key = user_gemini_key if user_gemini_key else env_gemini_key
+    
+    # Show status
+    user_configured = []
+    if user_openai_key:
+        user_configured.append("OpenAI (override)")
+    if user_gemini_key:
+        user_configured.append("Gemini (override)")
+    
+    if user_configured:
+        st.info(f"🔑 User override keys: {', '.join(user_configured)}")
+        logger.info(f"User provided API key overrides: {', '.join(user_configured)}")
+    
+    # Final validation
+    if not final_openai_key and not final_gemini_key:
+        st.warning("⚠️ No API keys available")
+        st.info("💡 Add API keys via:")
+        st.info("• Environment variables (.env file)")
+        st.info("• Input fields above")
+        logger.info("No API keys available (environment or user input)")
     else:
-        configured = []
-        if openai_key and openai_key not in ["your_working_api_key_here", ""]:
-            configured.append("OpenAI")
-        if gemini_key and gemini_key not in ["your_gemini_api_key_here", ""]:
-            configured.append("Gemini")
-        if configured:
-            st.info(f"📝 Configured: {', '.join(configured)}")
-            logger.info(f"API keys configured: {', '.join(configured)}")
-        else:
-            st.warning("⚠️ No valid API keys found")
-            logger.warning("Invalid API keys provided")
+        total_configured = []
+        if final_openai_key:
+            total_configured.append("OpenAI")
+        if final_gemini_key:
+            total_configured.append("Gemini")
+        
+        if not user_configured and env_configured:
+            # Only environment keys, no user overrides
+            pass  # Already shown above
+        elif user_configured and not env_configured:
+            # Only user keys, no environment
+            st.info(f"📝 Active keys: {', '.join(total_configured)}")
+        
+    # Use final keys for the rest of the application
+    openai_key = final_openai_key
+    gemini_key = final_gemini_key
     
     st.markdown("---")
     st.header("📁 Upload Data")
