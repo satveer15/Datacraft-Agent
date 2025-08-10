@@ -209,7 +209,32 @@ You can customize the behavior by modifying the configuration in `app.py`:
 - **Chart Types**: Enable/disable specific visualization types
 - **Security Settings**: Modify code execution restrictions
 
+## 🌐 Live Demo
+
+Try DataCraft SuperTool online: **[https://datacraft-agent.streamlit.app/](https://datacraft-agent.streamlit.app/)**
+
+Experience the full power of AI-driven data analysis without any setup - just upload your data and start asking questions!
+
 ## 🚀 Production Deployment
+
+### Streamlit Community Cloud (Recommended)
+
+The easiest way to deploy DataCraft SuperTool is using Streamlit Community Cloud:
+
+1. **Fork this repository** to your GitHub account
+2. **Visit** [share.streamlit.io](https://share.streamlit.io/)
+3. **Connect your GitHub** and select the forked repository
+4. **Set environment variables** in the app settings:
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `GOOGLE_API_KEY`: Your Google Gemini API key
+5. **Deploy** - Your app will be live at `https://your-app-name.streamlit.app/`
+
+Benefits of Streamlit Cloud deployment:
+- ✅ **Free hosting** for public repositories
+- ✅ **Automatic deployments** from GitHub commits
+- ✅ **Built-in SSL** and custom domains
+- ✅ **Resource management** and scaling
+- ✅ **No server maintenance** required
 
 ### Docker Compose Deployment
 
