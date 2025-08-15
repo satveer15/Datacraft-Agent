@@ -41,24 +41,36 @@ class DataAnalystAgent:
                 except Exception as test_error:
                     error_msg = str(test_error).lower()
                     if "quota" in error_msg or "429" in error_msg:
-                        st.warning("⚠️ OpenAI quota exceeded, trying Gemini...")
+                        if "openai_quota_error_shown" not in st.session_state:
+                            st.session_state.openai_quota_error_shown = True
+                            st.warning("⚠️ OpenAI quota exceeded, trying Gemini...")
                         logger.warning("OpenAI quota exceeded, falling back to Gemini")
                     elif "unauthorized" in error_msg or "401" in error_msg:
-                        st.error("❌ OpenAI API key invalid or expired")
+                        if "openai_auth_error_shown" not in st.session_state:
+                            st.session_state.openai_auth_error_shown = True
+                            st.error("❌ OpenAI API key invalid or expired")
                         logger.error("OpenAI API key unauthorized")
                     elif "insufficient_quota" in error_msg:
-                        st.error("❌ OpenAI account has insufficient quota/credits")
+                        if "openai_insufficient_quota_shown" not in st.session_state:
+                            st.session_state.openai_insufficient_quota_shown = True
+                            st.error("❌ OpenAI account has insufficient quota/credits")
                         logger.error("OpenAI insufficient quota")
                     else:
-                        st.warning(f"⚠️ OpenAI connection failed: {str(test_error)[:100]}")
+                        if "openai_connection_error_shown" not in st.session_state:
+                            st.session_state.openai_connection_error_shown = True
+                            st.warning(f"⚠️ OpenAI connection failed: {str(test_error)[:100]}")
                         logger.error(f"OpenAI test failed: {str(test_error)}")
                     self.llm = None
             except Exception as e:
                 error_msg = str(e).lower()
                 if "api key" in error_msg:
-                    st.error("❌ Invalid OpenAI API key format")
+                    if "openai_format_error_shown" not in st.session_state:
+                        st.session_state.openai_format_error_shown = True
+                        st.error("❌ Invalid OpenAI API key format")
                 else:
-                    st.error(f"❌ OpenAI setup failed: {str(e)[:100]}")
+                    if "openai_setup_error_shown" not in st.session_state:
+                        st.session_state.openai_setup_error_shown = True
+                        st.error(f"❌ OpenAI setup failed: {str(e)[:100]}")
                 logger.error(f"OpenAI initialization failed: {str(e)}")
                 self.llm = None
         
@@ -78,33 +90,49 @@ class DataAnalystAgent:
                 except Exception as test_error:
                     error_msg = str(test_error).lower()
                     if "quota" in error_msg or "429" in error_msg:
-                        st.error("❌ Google Gemini quota exceeded")
+                        if "gemini_quota_error_shown" not in st.session_state:
+                            st.session_state.gemini_quota_error_shown = True
+                            st.error("❌ Google Gemini quota exceeded")
                         logger.error("Gemini quota exceeded")
                     elif "unauthorized" in error_msg or "403" in error_msg or "401" in error_msg:
-                        st.error("❌ Google Gemini API key invalid or expired")
+                        if "gemini_auth_error_shown" not in st.session_state:
+                            st.session_state.gemini_auth_error_shown = True
+                            st.error("❌ Invalid Google Gemini API key")
                         logger.error("Gemini API key unauthorized")
                     elif "api key" in error_msg:
-                        st.error("❌ Invalid Google Gemini API key")
+                        if "gemini_key_format_error_shown" not in st.session_state:
+                            st.session_state.gemini_key_format_error_shown = True
+                            st.error("❌ Invalid Google Gemini API key")
                         logger.error("Invalid Gemini API key")
                     else:
-                        st.error(f"❌ Gemini connection failed: {str(test_error)[:100]}")
+                        if "gemini_connection_error_shown" not in st.session_state:
+                            st.session_state.gemini_connection_error_shown = True
+                            st.error(f"❌ Gemini connection failed: {str(test_error)[:100]}")
                         logger.error(f"Gemini test failed: {str(test_error)}")
                     self.llm = None
             except Exception as e:
                 error_msg = str(e).lower()
                 if "api key" in error_msg:
-                    st.error("❌ Invalid Google Gemini API key format")
+                    if "gemini_format_error_shown" not in st.session_state:
+                        st.session_state.gemini_format_error_shown = True
+                        st.error("❌ Invalid Google Gemini API key format")
                 else:
-                    st.error(f"❌ Gemini setup failed: {str(e)[:100]}")
+                    if "gemini_setup_error_shown" not in st.session_state:
+                        st.session_state.gemini_setup_error_shown = True
+                        st.error(f"❌ Gemini setup failed: {str(e)[:100]}")
                 logger.error(f"Gemini initialization failed: {str(e)}")
                 self.llm = None
         
         if not self.llm:
-            st.error("❌ No AI provider available")
-            st.info("🔑 Please provide valid API keys:")
-            st.info("• Check if your API keys are correct and active")
-            st.info("• Ensure you have sufficient quota/credits")
-            st.info("• Try refreshing the page after adding new keys")
+            # Only show this once per session to avoid spam
+            if "ai_provider_error_shown" not in st.session_state:
+                st.session_state.ai_provider_error_shown = True
+                with st.expander("⚠️ AI Configuration Required", expanded=False):
+                    st.error("❌ No AI provider available")
+                    st.info("🔑 Please provide valid API keys:")
+                    st.info("• Check if your API keys are correct and active")
+                    st.info("• Ensure you have sufficient quota/credits")
+                    st.info("• Try refreshing the page after adding new keys")
             logger.error("No AI provider available - all initialization attempts failed")
     
     def execute_code_safely(self, code: str, df: pd.DataFrame) -> Tuple[Any, str]:
