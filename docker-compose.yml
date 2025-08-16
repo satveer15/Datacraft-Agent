@@ -1,0 +1,48 @@
+services:
+  datacraft-supertool:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datacraft-supertool
+    ports:
+      - "8501:8501"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount data directory for persistent file storage
+      - ./data:/app/data
+      # Mount logs directory for persistent logging
+      - ./logs:/app/logs
+      # Optional: Mount .env file for environment variables
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.datacraft.rule=Host(`localhost`)"
+      - "traefik.http.services.datacraft.loadbalancer.server.port=8501"
+
+  # Optional: Redis for session management (if needed in future)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: datacraft-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   ports:
+  #     - "6379:6379"
+
+# Optional: Named volumes for persistent data
+# volumes:
+#   redis_data:
+
+networks:
+  default:
+    name: datacraft-network
