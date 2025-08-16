@@ -39,13 +39,26 @@ class DataAnalystAgent:
                     st.success("✅ Using OpenAI")
                     logger.info("OpenAI provider initialized successfully")
                 except Exception as test_error:
-                    if "quota" in str(test_error).lower() or "429" in str(test_error):
-                        st.warning("⚠️ OpenAI quota exceeded, will try Gemini...")
+                    error_msg = str(test_error).lower()
+                    if "quota" in error_msg or "429" in error_msg:
+                        st.warning("⚠️ OpenAI quota exceeded, trying Gemini...")
                         logger.warning("OpenAI quota exceeded, falling back to Gemini")
+                    elif "unauthorized" in error_msg or "401" in error_msg:
+                        st.error("❌ OpenAI API key invalid or expired")
+                        logger.error("OpenAI API key unauthorized")
+                    elif "insufficient_quota" in error_msg:
+                        st.error("❌ OpenAI account has insufficient quota/credits")
+                        logger.error("OpenAI insufficient quota")
                     else:
+                        st.warning(f"⚠️ OpenAI connection failed: {str(test_error)[:100]}")
                         logger.error(f"OpenAI test failed: {str(test_error)}")
                     self.llm = None
             except Exception as e:
+                error_msg = str(e).lower()
+                if "api key" in error_msg:
+                    st.error("❌ Invalid OpenAI API key format")
+                else:
+                    st.error(f"❌ OpenAI setup failed: {str(e)[:100]}")
                 logger.error(f"OpenAI initialization failed: {str(e)}")
                 self.llm = None
         
@@ -56,17 +69,43 @@ class DataAnalystAgent:
                     temperature=0,
                     google_api_key=self.gemini_key
                 )
-                self.provider = "Google Gemini"
-                st.success("✅ Using Google Gemini")
-                logger.info("Google Gemini provider initialized successfully")
+                # Test the connection
+                try:
+                    self.llm.invoke("test")
+                    self.provider = "Google Gemini"
+                    st.success("✅ Using Google Gemini")
+                    logger.info("Google Gemini provider initialized successfully")
+                except Exception as test_error:
+                    error_msg = str(test_error).lower()
+                    if "quota" in error_msg or "429" in error_msg:
+                        st.error("❌ Google Gemini quota exceeded")
+                        logger.error("Gemini quota exceeded")
+                    elif "unauthorized" in error_msg or "403" in error_msg or "401" in error_msg:
+                        st.error("❌ Google Gemini API key invalid or expired")
+                        logger.error("Gemini API key unauthorized")
+                    elif "api key" in error_msg:
+                        st.error("❌ Invalid Google Gemini API key")
+                        logger.error("Invalid Gemini API key")
+                    else:
+                        st.error(f"❌ Gemini connection failed: {str(test_error)[:100]}")
+                        logger.error(f"Gemini test failed: {str(test_error)}")
+                    self.llm = None
             except Exception as e:
-                st.error(f"❌ Gemini initialization failed: {str(e)[:100]}")
+                error_msg = str(e).lower()
+                if "api key" in error_msg:
+                    st.error("❌ Invalid Google Gemini API key format")
+                else:
+                    st.error(f"❌ Gemini setup failed: {str(e)[:100]}")
                 logger.error(f"Gemini initialization failed: {str(e)}")
                 self.llm = None
         
         if not self.llm:
-            st.error("❌ No AI provider available. Please configure valid API keys.")
-            logger.error("No AI provider available - invalid API keys")
+            st.error("❌ No AI provider available")
+            st.info("🔑 Please provide valid API keys:")
+            st.info("• Check if your API keys are correct and active")
+            st.info("• Ensure you have sufficient quota/credits")
+            st.info("• Try refreshing the page after adding new keys")
+            logger.error("No AI provider available - all initialization attempts failed")
     
     def execute_code_safely(self, code: str, df: pd.DataFrame) -> Tuple[Any, str]:
         """Execute Python code safely and return result and output"""
@@ -500,7 +539,22 @@ class DataAnalystAgent:
                 return None
                 
         except Exception as e:
-            st.warning(f"Could not generate chart code: {str(e)[:100]}")
+            error_msg = str(e).lower()
+            # Handle runtime API errors during chart generation
+            if "quota" in error_msg or "429" in error_msg:
+                st.error(f"❌ {self.provider} quota exceeded during chart generation")
+                st.info("🔑 Try using a different API key or wait before retrying")
+                logger.error(f"{self.provider} quota exceeded during chart generation")
+            elif "unauthorized" in error_msg or "401" in error_msg or "403" in error_msg:
+                st.error(f"❌ {self.provider} API key expired or invalid")
+                st.info("🔑 Please update your API key in the sidebar")
+                logger.error(f"{self.provider} API key unauthorized during chart generation")
+            elif "rate limit" in error_msg:
+                st.warning(f"⚠️ {self.provider} rate limit exceeded, please wait")
+                logger.warning(f"{self.provider} rate limit exceeded during chart generation")
+            else:
+                st.warning(f"⚠️ Could not generate chart via {self.provider}")
+                logger.warning(f"Chart generation failed: {str(e)}")
             return None
     
     def analyze(self, df: pd.DataFrame, query: str) -> str:
@@ -892,6 +946,23 @@ class DataAnalystAgent:
             response = self.llm.invoke(interpretation_prompt)
             return response.content if hasattr(response, 'content') else str(response)
         except Exception as e:
+            error_msg = str(e).lower()
+            # Handle runtime API errors
+            if "quota" in error_msg or "429" in error_msg:
+                st.error(f"❌ {self.provider} quota exceeded during analysis")
+                st.info("🔑 Try using a different API key or wait before retrying")
+                logger.error(f"{self.provider} quota exceeded during analysis")
+            elif "unauthorized" in error_msg or "401" in error_msg or "403" in error_msg:
+                st.error(f"❌ {self.provider} API key expired or invalid")
+                st.info("🔑 Please update your API key in the sidebar")
+                logger.error(f"{self.provider} API key unauthorized during analysis")
+            elif "rate limit" in error_msg:
+                st.warning(f"⚠️ {self.provider} rate limit exceeded, please wait")
+                logger.warning(f"{self.provider} rate limit exceeded")
+            else:
+                st.warning(f"⚠️ {self.provider} API error, using local analysis")
+                logger.warning(f"{self.provider} API error during analysis: {str(e)}")
+            
             # Fallback to structured summary if AI fails
             return self.format_summary_insights(data_summary, query)
     
